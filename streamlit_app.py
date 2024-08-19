@@ -78,7 +78,7 @@ columnDefs = [{'field': "Name", 'minWidth': 120, 'filter': True, 'sortable': Fal
                              'headerTooltip': "Like OAA-WAR, but with the pitcher's BaseRuns run estimate",
                              'tooltipValueGetter': JsCode("""function(){return "Like OAA-WAR but with the pitcher's BaseRuns run estimate"}""")},
                             {'field': 'xBaseRuns',
-                             'minWidth': 80,
+                             'minWidth': 110,
                              'headerName': 'xBaseRuns',
                              'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1,
                              'headerTooltip': "Like BaseRuns-WAR, but the xERA-style xBaseRuns is used",
