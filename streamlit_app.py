@@ -50,7 +50,7 @@ css={'.ag-header-group-cell-label.ag-sticky-label': {'flex-direction': 'column',
 
 columnDefs = [{'field': "Name", 'minWidth': 200, 'filter': True, 'sortable': False, 'pinned': 'left'},
               {'field': "Year", 'minWidth':  70, 'filter': True, 'sortable': False, 'pinned': 'left'},
-              {'field': "Age",  'minWidth':  70, 'filter': True, 'sortable': False, 'suppressHeaderFilterButton': False},
+              {'field': "Age",  'minWidth':  70, 'filter': True, 'sortable': True,  'suppressHeaderFilterButton': False},
               {'field': "Team", 'minWidth':  70, 'filter': True, 'sortable': False, 'suppressHeaderFilterButton': False},
               {'headerName': "Runs Allowed",
                'headerTooltip': "Pitcher's runs allowed are used",
