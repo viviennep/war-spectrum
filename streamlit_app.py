@@ -19,6 +19,8 @@ war_names = ['Runs Allowed','Baseball Reference',
 
 disp_wars = wars.loc[:,['Name','Year','Age','Team']+war_names]
 disp_wars.sort_values('xBaseRuns',ascending=False,ignore_index=True,inplace=True)
+disp_wars['Average']   = disp_wars.loc[:,war_names].mean(axis=1)
+disp_wars['StdDev']  = disp_wars.loc[:,war_names].std(axis=1)
 
 st.set_page_config(layout="wide")
 
@@ -102,6 +104,12 @@ columnDefs = [{'field': "Name", 'minWidth': 120, 'filter': True, 'sortable': Fal
                              'headerTooltip': "Like BaseRuns-WAR, but uses Stuff+ style model for xBaseRuns",
                              'tooltipValueGetter': JsCode("""function(){return "Like BaseRuns-WAR, but uses Stuff+ style model for xBaseRuns"}""")},
                             ]},
+              {'headerName': "Statistics",
+               'headerTooltip': "Average and standard deviation of these WARs",
+               'children': [{'field': 'Average',
+                             'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1},
+                            {'field': 'StdDev',
+                             'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1} ]},
                ]
 
 gridOptions =  {'defaultColDef': {'flex': 1, 'minWidth': 120, 'filterable': True,
@@ -127,7 +135,7 @@ you hover over it :blush: This lets you, for example, limit the table to only se
 
 left_col,right_col = st.columns(2)
 with left_col.expander('Included Years') :
-    years_select = st.multiselect("Included years", [2021,2022,2023,2024], [2021,2022,2023,2024])
+    years_select = st.multiselect("Included years", [2021,2022,2023,2024], [2024])
 with right_col.expander('Included Teams') :
     teams_select = st.multiselect("Included Teams", disp_wars.Team.unique(), disp_wars.Team.unique(),
                                     label_visibility='collapsed')
@@ -149,17 +157,23 @@ st.markdown('''#### Selected Players WAR''')
 if return_value.selected_rows is None:
     st.write('''Select rows in the table to see a line plot of their WARs''')
 else:
+    if return_value.selected_rows.shape[0] == 1:
+        row = return_value.selected_rows.iloc[0]
+        title = row['Name'] + ' ' + str(row['Year'])
+    else:
+        title = ''
     f = go.Figure()
     min_war = return_value.selected_rows[war_names].min().min()
     max_war = return_value.selected_rows[war_names].max().max()
     for ind,row in return_value.selected_rows.iterrows():
         label = row['Name'] + ' ' + str(row['Year'])
         f.add_trace(go.Scatter(x=np.arange(8),y=row[war_names].values,
-                               mode='lines',name=label))
+                               mode='lines+markers',name=label))
     f.update_layout(xaxis = {'tickmode': 'array', 
                              'tickvals': np.arange(8), 
                              'ticktext': war_names},
-                    yaxis_range = [min(0,min_war),max_war+0.1])
+                    yaxis_range = [min(0,min_war),max_war+0.1],
+                    title = title)
     st.plotly_chart(f,use_container_width=False,width=100)
 
 
@@ -307,7 +321,7 @@ which simply add the run values of each pitch, but I found that using a BaseRuns
 could better describe same-season runs allowed.
 
 $$
-\mathrm{RAA_{fip} = \left(\frac{RA_{lg}}{TBF_{lg}}TBF+RP_{adj}\right)-piBsR+lg_{adj}}
+\mathrm{RAA_{piBsR} = \left(\frac{RA_{lg}}{TBF_{lg}}TBF+RP_{adj}\right)-piBsR+lg_{adj}}
 $$
 - $\small\mathrm{\frac{RA_{lg}}{TBF_{lg}}TBF}$ is the expected number of runs allowed in this many batters faced
 - $\small\mathrm{RP_{adj}}$ is an adjustment for how guys perform better as relief pitchers than starters
@@ -354,7 +368,7 @@ season. 5 models were then made for each classification task (swing/take, whiff/
 This is just like the Pitching+ RAA but with a Stuff+ model instead.
 
 $$
-\mathrm{RAA_{fip} = \left(\frac{RA_{lg}}{TBF_{lg}}TBF+RP_{adj}\right)-stBsR+lg_{adj}}
+\mathrm{RAA_{stBsR} = \left(\frac{RA_{lg}}{TBF_{lg}}TBF+RP_{adj}\right)-stBsR+lg_{adj}}
 $$
 - $\small\mathrm{\frac{RA_{lg}}{TBF_{lg}}TBF}$ is the expected number of runs allowed in this many batters faced
 - $\small\mathrm{RP_{adj}}$ is an adjustment for how guys perform better as relief pitchers than starters
