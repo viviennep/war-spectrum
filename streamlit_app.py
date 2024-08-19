@@ -48,8 +48,8 @@ which show the correlations between all of these WARs and explain the difference
 css={'.ag-header-group-cell-label.ag-sticky-label': {'flex-direction': 'column', 'margin': 'auto',
                                                      'font-size': '12pt'}}
 
-columnDefs = [{'field': "Name", 'minWidth': 200, 'filter': True, 'sortable': False, 'pinned': 'left'},
-              {'field': "Year", 'minWidth':  70, 'filter': True, 'sortable': False, 'pinned': 'left'},
+columnDefs = [{'field': "Name", 'minWidth': 120, 'filter': True, 'sortable': False, 'pinned': 'left'},
+              {'field': "Year", 'minWidth':  70, 'filter': True, 'sortable': False},
               {'field': "Age",  'minWidth':  70, 'filter': True, 'sortable': True,  'suppressHeaderFilterButton': False},
               {'field': "Team", 'minWidth':  70, 'filter': True, 'sortable': False, 'suppressHeaderFilterButton': False},
               {'headerName': "Runs Allowed",
