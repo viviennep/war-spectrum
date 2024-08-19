@@ -39,8 +39,10 @@ where they were located for that matter.
 
 There's a sortable & filterable leaderboard that has all pitcher seasons from 2021-2024,
 if you select the rows then a line plot of their WARs will appear below the table :smile:
-Also below the leaderboard are a few dropdowns where I explain the WAR calculation and some tables 
-which show the correlations between all of these WARs and explain the differences between them all.
+There are also a few dropdowns where I explain each of the WAR calculations and justify my decisions
+for them all, including an explanation for why I'm using BaseRuns rather than something more familiar like
+(x)wOBA. After that there are some tables which show the correlations between all of these WARs and 
+explain the differences between them all :cherry_blossom:
 
 ''')
 
@@ -178,7 +180,7 @@ $$
 - $\small\mathrm{RP_{adj}}$ is an adjustment for how guys perform better as relief pitchers than starters
 - $\small\mathrm{ExIn_{adj}}$ is an adjustment for the automatic runners in extra innings
 - $\small\mathrm{lg_{adj}}$ is an adjustment to ensure the league's total RAA is $0$
-''')
+''',unsafe_allow_html=True)
 
     with rw_tab:
         st.markdown(r'''
