@@ -49,7 +49,7 @@ css={'.ag-header-group-cell-label.ag-sticky-label': {'flex-direction': 'column',
                                                      'font-size': '12pt'}}
 
 columnDefs = [{'field': "Name", 'minWidth': 120, 'filter': True, 'sortable': False, 'pinned': 'left'},
-              {'field': "Year", 'minWidth':  70, 'filter': True, 'sortable': False},
+              {'field': "Year", 'minWidth':  70, 'filter': True, 'sortable': False,},
               {'field': "Age",  'minWidth':  70, 'filter': True, 'sortable': True,  'suppressHeaderFilterButton': False},
               {'field': "Team", 'minWidth':  70, 'filter': True, 'sortable': False, 'suppressHeaderFilterButton': False},
               {'headerName': "Runs Allowed",
@@ -118,7 +118,10 @@ gridOptions =  {'defaultColDef': {'flex': 1, 'minWidth': 120, 'filterable': True
                 'groupSelectsChildren': False, 
                 'groupSelectsFiltered': True}
 
-st.markdown('#### WAR Leaderboard')
+st.markdown('''#### WAR Leaderboard
+You can filter columns on mobile by holding down the column header, or on desktop by clicking the menu button when 
+you hover over it :blush: This lets you, for example, limit the table to only select pitchers.
+''')
 
 left_col,right_col = st.columns(2)
 with left_col.expander('Included Years') :
@@ -168,7 +171,8 @@ with raa_exp:
 No corrections for park factors or defence. Corrections are still applied for relief
 pitchers, quality of opponents, and for extra-inning automatic runners.
 $$
-\mathrm{RAA_{runs} = \left(xRA + RP_{adj} + ExIn_{adj}\right) - RA + lg_{adj}}
+\mathrm{RAA_{runs} = \left(xRA + RP_{adj} + ExIn_{adj}\right) \newline
+        - RA + lg_{adj}}
 $$
 - $\small\mathrm{xRA}$ is how other pitchers performed against this pitcher's opponents on average
 - $\small\mathrm{RP_{adj}}$ is an adjustment for how guys perform better as relief pitchers than starters
@@ -511,8 +515,7 @@ war_exp.markdown(r'''
 
 For the sake of this exercise I think it's good to have a consistent WAR calculation methodology, and to that 
 end I've opted to base all of the following WARs of the rWAR methodology. This includes FIP-WAR, which 
-is not fWAR, it's FIP-based rWAR. The differences between which I'll address when we get to it, but they're
-not too important.  
+is not fWAR! it's FIP-based rWAR!
 
 ##### 1. Runs Above Average
 
@@ -652,83 +655,3 @@ control_exp.write('''
 | Stuff+             | :x: Stuff+ BaseRuns Estimate    | :x:              | :x:                       | :x:                           | :x:             | :x:          | ✔️                | :x:                        |
 ''')
 
-
-
-#st.markdown(r'''
-### Introduction
-#> This is gonna need an explanation, huh.
-#
-#&mdash; *Me, halfway through making "xBaseRuns"*
-#
-#An oft-touted problem with WAR is that WAR doesn't exist: it's either rWAR or fWAR (thankfully, 
-#these people don't know WARP exists) neither of which agrees with the other, sometimes in dramatic 
-#fashion. "If two implementations of the same thing can't agree with each other then surely this 
-#is a flaw with the foundation on which they build," or so the tulpa of 'The WARmonger' who lives 
-#in my head says. However, in recent years many people around the world have noticed that baseball 
-#is actually played by teams of players, rather than 9 isolated men doing their own thing as it was 
-#once believed for so long, and that as a result allocating responsibility for a team action to its 
-#players can hardly ever be an objective science.  
-#I think, as a person who would prefer to never take responsibility for her choices, that the ability of WAR 
-#to recognizing this and allow a variety of conflicting implementations is a feature and not a bug &mdash; 
-#"My stat isn't wrong, you just disagree with me *subjectively*," is a defence I always love to have in my 
-#back pocket for a twitter argument, after all. Taking this argument and reworking it in a less pathetic 
-#direction isn't too difficult a task, but one that's for less honest people than me.
-#
-#Recently I've had some fun with this flexibility, and I hope you all will too.  
-#
-### A Pitcher's Responsibility
-#The two major WARs both agree that a pitcher shouldn't be held responsible for all of the runs he allows, 
-#just for like, most of them. In fact they even agree on which runs the pitcher shouldn't be responsible for, 
-#namely, the ones attributable to his team's defensive performance and the ones attributable to the park in 
-#which he found himself pitching.   
-#Baseball Reference went about this in the obvious way which, I think, most people would &mdash; start with 
-#the pitcher's runs allowed and then remove runs which are attributable to his circumstances: the defence of 
-#his team, the parks in which he happened to play, and more recently the extra-innings automatic runners. 
-#Assumptions need to be made to realise this idea as a calculable stat, but this is the basis for rWAR.
-#Fangraphs took the less obvious approach which, in a way, motivates what I've done. Rather than
-#correcting the pitcher's real-life runs allowed for his defence they opted to **estimate** his runs allowed
-#using only information which does not involve his defence... except for infield fly balls which they 
-#argue a corpse could catch 99% of the time anyways; fine, whatever, I'll allow it.  
-#Empirically, this FIP (or ifFIP) based run estimate works very well, by many people's standards at least, 
-#but for others the utter disregard for all plate appearances which end with a ball in play (that aren't
-#infield fly balls) creates an uncomfortable feeling. After all, pitching to weak contact is something 
-#that exists, and like, R.A. Dickey was letting the ball in play 73% of the time and 100% of those were 
-#weak (and yes, he consistently over-performed his FIP in basically every year).
-#Perhaps, one of these hypothetical people may surmise, this defence-independent approach to pitcher evaluation is
-#a good idea, but FIP isn't the way to do it. Maybe we should give pitchers partial credit depending 
-#on the quality of contact they induce. This is, of course, a roundabout way to introduce something with which
-#we're all familiar, xERA. And perhaps another, stupider hypothetical person surmises that no, all plate 
-#appearances have to matter, they happened after all, and furthermore since defensive metrics are less developed
-#and less consistent than offensive metrics, we shouldn't bother with a defensive correction at all.
-#Regrettably for both of these people, there exist no public WARs that use either xERA as a run estimate or 
-#forgo a defensive control altogether; however, and this is the crux of the matter &mdash; there's nothing stopping us.
-#
-#So with no further ado, I've made 6½ new WARs. Each of which differs in what it claims is the responsibility 
-#of the pitcher, starting from forcing him to reckon with all runs he allowed, then stripping responsibility
-#step by step to the point that the model doesn't even know or care about where he located any of his pitches. 
-#
-### Introduction
-#
-#The two major WARs both agree that a pitcher shouldn't be held responsible for all of the runs he allows, 
-#instead he should only be held responsible for like, most of them. In fact they even agree on which runs the pitcher 
-#shouldn't be responsible for, the ones attributable to his team's defensive performance and the ones 
-#attributable to the park in which he found himself pitching.   
-#Baseball Reference went about doing this in the way which, I think, most people would do it &mdash; start with 
-#the pitcher's runs allowed and then remove runs which are attributable to his circumstances: the defence of his team, 
-#the parks in which he happened to play, and more recently the extra-innings automatic runners. 
-#Assumptions need to be made to realise this idea as a calculable stat, but this is the basis for rWAR.
-#Fangraphs took the less obvious approach which, in a way, motivates what I've done. Rather than
-#correcting the pitcher's real-life runs allowed for his defence they opted to **estimate** his runs allowed
-#using only information which does not involve his defence... except for infield fly balls which they 
-#argue a corpse could catch 99% of the time anyways; fine, whatever, I'll allow it.  
-#By many people's standards this FIP (or ifFIP) based run estimate works very well, but for others the utter 
-#disregard for all plate appearances which end with a ball in play (that aren't infield fly balls) creates an
-#uncomfortable feeling. After all, pitching to weak contact is something that exists, and like, R.A. Dickey was 
-#out-performing his FIP basically every year. Perhaps, one of these hypothetical people may surmise, this 
-#defence-independent approach to pitcher evaluation is a good idea, but FIP isn't the way to do it. Maybe we should 
-#give pitchers partial credit depending on the quality of contact they induce. And perhaps another, stupider hypothetical 
-#person surmises that no, all plate appearances have to matter, they happened after all, and furthermore since 
-#he doesn't believe in defensive metrics we shouldn't bother with a defensive correction at all. Regrettably for both of 
-#these real people, there exist no public WARs that use either xERA as a run estimate or forgo a defensive control 
-#altogether; however, and this is the crux of the matter &mdash; there's nothing stopping us.
-#''')
