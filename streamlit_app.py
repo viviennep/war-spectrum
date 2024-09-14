@@ -46,7 +46,7 @@ for them all, including an explanation for why I'm using BaseRuns rather than so
 (x)wOBA. After that there are some tables which show the correlations between all of these WARs and 
 explain the differences between them all :cherry_blossom:
 
-*Last Updated: 9/1/2024*
+*Last Updated: 9/13/2024*
 
 ''')
 
