@@ -17,4 +17,9 @@ dependencies = [
     'torch',
 ]
 
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[too.setuptools.packages.find]
+where = ["src"]
 
