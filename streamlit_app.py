@@ -1,159 +1,305 @@
-import streamlit as st, numpy as np, matplotlib.pyplot as plt, pandas as pd, plotly.express as px
+import streamlit as st, numpy as np, polars as pl, pandas as pd, plotly.express as px
+import pathlib
 import plotly.graph_objects as go
 import plotly.figure_factory as ff
 from st_aggrid import AgGrid
 from st_aggrid.grid_options_builder import GridOptionsBuilder
 from st_aggrid.shared import GridUpdateMode, JsCode
+cl = pl.col
 
+data_dir  = pathlib.Path(__file__).resolve().parent.parent / 'data'
 
-wars = pd.read_pickle('final_wars.pickle')
+stints = pl.read_parquet(data_dir / 'stints')
 
-wars.rename(columns={'name_common': 'Name', 'age': 'Age', 'year_ID':'Year', 'team_ID': 'Team',
-                     'ra_war': 'Runs Allowed', 'r_war': 'Baseball Reference',
-                     'oaa_war': 'OAA', 'bsr_war': 'BaseRuns', 'xbsr_war': 'xBaseRuns', 'fip_war': 'FIP',
-                     'pitch_war': 'Pitching+', 'stuff_war': 'Stuff+'}, inplace=True)
+war_convert = {
+    'rWAR'     : 'rWAR',
+    'fWAR'     : 'fWAR',
+    'RA_WAR'   : 'Runs Allowed WAR',
+    'Rally_WAR': 'Rally WAR',
+    'OAA_WAR'  : 'OAA WAR',
+    'BsR_WAR'  : 'BaseRuns WAR',
+    'DIPS_WAR' : 'FIP WAR',
+    'xBsR_WAR' : 'xBaseRuns WAR',
+    'Stuff_WAR': 'Stuff+ WAR',
+    'Pitch_WAR': 'Pitch+ WAR',
+}
 
-war_names = ['Runs Allowed','Baseball Reference',
-             'OAA','BaseRuns','xBaseRuns','FIP',
-             'Pitching+','Stuff+']
+war_names = [
+    'Runs Allowed WAR',
+    'Baseball Reference',
+    'OAA WAR',
+    'BaseRuns WAR',
+    'FIP WAR',
+    'xBaseRuns WAR',
+    'Stuff+ WAR',
+    'Pitch+ WAR',
+]
 
-disp_wars = wars.loc[:,['Name','Year','Age','Team']+war_names]
-disp_wars.sort_values('xBaseRuns',ascending=False,ignore_index=True,inplace=True)
-disp_wars['Average']   = disp_wars.loc[:,war_names].mean(axis=1)
-disp_wars['StdDev']  = disp_wars.loc[:,war_names].std(axis=1)
+wars = (
+    stints.group_by('pitcher','season')
+    .agg(
+        cl('name').first(),
+        *(cl(i).sum() for i in war_convert),
+        team=(
+            pl.when(cl('team_abbr').len().eq(1))
+            .then(cl('team_abbr').first())
+            .when(cl('team_abbr').len().eq(2)).then(pl.lit('2TM'))
+            .when(cl('team_abbr').len().eq(3)).then(pl.lit('3TM'))
+            .when(cl('team_abbr').len().eq(4)).then(pl.lit('4TM'))
+            .when(cl('team_abbr').len().eq(5)).then(pl.lit('5TM'))
+            .when(cl('team_abbr').len().eq(6)).then(pl.lit('6TM'))
+            .otherwise(pl.lit('7+TM'))
+        )
+    )
+    .sort('rWAR')
+    .with_columns(
+        Average = pl.sum_horizontal(list(war_convert)[2:])/(len(war_convert)-2),
+        StdDev = pl.concat_list(list(war_convert)[2:]).list.std(),
+    )
+)
+
+last_date = (
+    pl.scan_parquet(data_dir/'play_by_play')
+    .select('game_date')
+    .max()
+    .collect()
+    .item()
+).strftime('%m/%d/%Y')
 
 st.set_page_config(layout="wide")
 
-st.markdown('''
+st.markdown(f'''
 
 # Pitcher WAR Spectrum
 
-##### Filling in the gaps between rWAR and fWAR 
-If you, like me, are a fan of having different WAR perspectives but wished that there were instead 
-something like, oh idk, 8 different perspectives to pick and choose from for agenda crafting purposes, 
-then boy do I got the leaderboard for you.
+##### Filling in the gaps between rWAR and fWAR, and Beyond!
+If you, like me, are a fan of having different WAR perspectives but wished that there 
+were instead something like, oh idk, 8 different perspectives to pick and choose from 
+for agenda crafting purposes, then boy do I got the leaderboard for you.
 
-Here are those 8 WARs of your dreams &mdash; 6½ of which are new, each differing in what it claims is the 
-responsibility of the pitcher, starting by forcing him to reckon with each and every run he 
-allowed in their entirety, and then proceeding to strip away responsibility step by step to the 
-point that the model doesn't even know about what happened on any of the pitches he threw, or 
-where they were located for that matter. 
+Here are those 8 WARs of your dreams &mdash; 6½ of which are new, each differing in 
+what it claims is the responsibility of the pitcher, starting by forcing him to reckon 
+with each and every run he allowed in their entirety, and then proceeding to strip away
+responsibility step by step to the point that the model doesn't even know about what 
+happened on any of the pitches he threw, or where they were located for that matter. 
 
 There's a sortable & filterable leaderboard that has all pitcher seasons from 2021-2024,
 if you select the rows then a line plot of their WARs will appear below the table :smile:
-There are also a few dropdowns where I explain each of the WAR calculations and justify my decisions
-for them all, including an explanation for why I'm using BaseRuns rather than something more familiar like
-(x)wOBA. After that there are some tables which show the correlations between all of these WARs and 
-explain the differences between them all :cherry_blossom:
+There are also a few dropdowns where I explain each of the WAR calculations and justify 
+my decisions for them all, including an explanation for why I'm using BaseRuns rather 
+than something more familiar like (x)wOBA. After that there are some tables which show 
+the correlations between all of these WARs and explain the differences between them 
+all :cherry_blossom:
 
-*Last Updated: 9/13/2024*
+*Last Updated: {last_date}*
 
 ''')
 
 
-css={'.ag-header-group-cell-label.ag-sticky-label': {'flex-direction': 'column', 'margin': 'auto',
-                                                     'font-size': '12pt'}}
+css = {
+    '.ag-header-group-cell-label.ag-sticky-label': {
+        'flex-direction': 'column',
+        'margin': 'auto',
+        'font-size': '12pt'
+    }
+}
 
-columnDefs = [{'field': "Name", 'minWidth': 120, 'filter': True, 'sortable': False, 'pinned': 'left'},
-              {'field': "Year", 'minWidth':  70, 'filter': True, 'sortable': True,},
-              {'field': "Age",  'minWidth':  70, 'filter': True, 'sortable': True,  'suppressHeaderFilterButton': False},
-              {'field': "Team", 'minWidth':  70, 'filter': True, 'sortable': True, 'suppressHeaderFilterButton': False},
-              {'headerName': "Runs Allowed",
-               'headerTooltip': "Pitcher's runs allowed are used",
-               'children': [{'field': 'Runs Allowed',
-                             'minWidth': 130,
-                             'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1,
-                             'headerTooltip': "Pitcher is responsible for all runs allowed",
-                             'tooltipValueGetter': JsCode("""function(){return "Pitcher is responsible for all runs allowed"}""")},
-                            {'field': 'Baseball Reference',
-                             'minWidth': 150,
-                             'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1,
-                             'headerTooltip': "Corrected for team's defence by DRS",
-                             'tooltipValueGetter': JsCode("""function(){return "Corrected for team's defence"}""")},
-                            {'field': 'OAA',
-                             'minWidth': 80,
-                             'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1,
-                             'headerTooltip': "Corrected using team OAA when pitcher is on the mound",
-                             'tooltipValueGetter': JsCode("""function(){return "Corrected using team OAA when pitcher is on the mound"}""")},
-                            ]},
-              {'headerName': "Runs Allowed Estimators",
-               'headerTooltip': "A model which estimates a pitcher's runs allowed is used",
-               'children': [{'field': 'BaseRuns',
-                             'minWidth': 110,
-                             'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1,
-                             'headerTooltip': "Like OAA-WAR, but with the pitcher's BaseRuns run estimate",
-                             'tooltipValueGetter': JsCode("""function(){return "Like OAA-WAR but with the pitcher's BaseRuns run estimate"}""")},
-                            {'field': 'xBaseRuns',
-                             'minWidth': 110,
-                             'headerName': 'xBaseRuns',
-                             'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1,
-                             'headerTooltip': "Like BaseRuns-WAR, but the xERA-style xBaseRuns is used",
-                             'tooltipValueGetter': JsCode("""function(){return "Like BaseRuns-WAR, but the xERA-style xBaseRuns is used"}""")},
-                            {'field': 'FIP',
-                             'minWidth': 80,
-                             'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1,
-                             'headerTooltip': "rWAR-style but with FIP",
-                             'tooltipValueGetter': JsCode("""function(){return "rWAR-style but with FIP"}""")},
-                            ]},
-              {'headerName': "Pitch Modelling",
-               'headerTooltip': "A model which estimates a pitcher's runs allowed is used",
-               'children': [{'field': 'Pitching+',
-                             'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1,
-                             'headerTooltip': "Like BaseRuns-WAR, but uses Pitching+ style model for xBaseRuns",
-                             'tooltipValueGetter': JsCode("""function(){return "Like BaseRuns-WAR, but uses Pitching+ style model for xBaseRuns"}""")},
-                            {'field': 'Stuff+',
-                             'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1,
-                             'headerTooltip': "Like BaseRuns-WAR, but uses Stuff+ style model for xBaseRuns",
-                             'tooltipValueGetter': JsCode("""function(){return "Like BaseRuns-WAR, but uses Stuff+ style model for xBaseRuns"}""")},
-                            ]},
-              {'headerName': "Statistics",
-               'headerTooltip': "Average and standard deviation of these WARs",
-               'children': [{'field': 'Average',
-                             'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1},
-                            {'field': 'StdDev',
-                             'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1} ]},
-               ]
+columnDefs = [
+    {
+        'field': "Name", 
+        'minWidth': 120, 
+        'filter': True, 
+        'sortable': False, 
+        'pinned': 'left'
+    },
+    {
+        'field': "Year",
+        'minWidth':  70,
+        'filter': True,
+        'sortable': True,
+    },
+    {
+        'field': "Age",
+        'minWidth':  70,
+        'filter': True,
+        'sortable': True, 
+        'suppressHeaderFilterButton': False
+    },
+    {
+        'field': "Team",
+        'minWidth':  70,
+        'filter': True,
+        'sortable': True,
+        'suppressHeaderFilterButton': False
+    },
+    {
+        'headerName': "Runs Allowed",
+        'headerTooltip': "Pitcher's runs allowed are used",
+        'children': [
+            {
+                'field': 'Runs Allowed',
+                'minWidth': 130,
+                'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1,
+                'headerTooltip': "Pitcher is responsible for all runs allowed",
+                'tooltipValueGetter': JsCode(
+                    """function(){return "Pitcher is responsible for all runs allowed"}"""
+                )
+            },
+            {
+                'field': 'Baseball Reference',
+                'minWidth': 150,
+                'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1,
+                'headerTooltip': "Corrected for team's defence by DRS",
+                'tooltipValueGetter': JsCode(
+                    """function(){return "Corrected for team's defence"}"""
+                )
+            },
+            {
+                'field': 'OAA',
+                'minWidth': 80,
+                'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1,
+                'headerTooltip': "Corrected using team OAA when pitcher is on the mound",
+                'tooltipValueGetter': JsCode(
+                    """function(){return "Corrected using team OAA when pitcher is on the mound"}"""
+                )
+            },
+        ]
+    },
+    {
+        'headerName': "Runs Allowed Estimators",
+        'headerTooltip': "A model which estimates a pitcher's runs allowed is used",
+        'children': [
+            {
+                'field': 'BaseRuns',
+                'minWidth': 110,
+                'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1,
+                'headerTooltip': "Like OAA-WAR, but with the pitcher's BaseRuns run estimate",
+                'tooltipValueGetter': JsCode(
+                    """function(){return "Like OAA-WAR but with the pitcher's BaseRuns run estimate"}"""
+                )
+            },
+            {
+                'field': 'xBaseRuns',
+                'minWidth': 110,
+                'headerName': 'xBaseRuns',
+                'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1,
+                'headerTooltip': "Like BaseRuns-WAR, but the xERA-style xBaseRuns is used",
+                'tooltipValueGetter': JsCode(
+                    """function(){return "Like BaseRuns-WAR, but the xERA-style xBaseRuns is used"}"""
+                )
+            },
+            {
+                'field': 'FIP',
+                'minWidth': 80,
+                'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1,
+                'headerTooltip': "rWAR-style but with FIP",
+                'tooltipValueGetter': JsCode(
+                    """function(){return "rWAR-style but with FIP"}"""
+                )
+            },
+        ]
+    },
+    {
+        'headerName': "Pitch Modelling",
+        'headerTooltip': "A model which estimates a pitcher's runs allowed is used",
+        'children': [
+            {
+                'field': 'Pitching+',
+                'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1,
+                'headerTooltip': "Like BaseRuns-WAR, but uses Pitching+ style model for xBaseRuns",
+                'tooltipValueGetter': JsCode(
+                    """function(){return "Like BaseRuns-WAR, but uses Pitching+ style model for xBaseRuns"}"""
+                )
+            },
+            {
+                'field': 'Stuff+',
+                'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1,
+                'headerTooltip': "Like BaseRuns-WAR, but uses Stuff+ style model for xBaseRuns",
+                'tooltipValueGetter': JsCode(
+                    """function(){return "Like BaseRuns-WAR, but uses Stuff+ style model for xBaseRuns"}"""
+                )
+            },
+        ]
+    },
+    {
+        'headerName': "Statistics",
+        'headerTooltip': "Average and standard deviation of these WARs",
+        'children': [
+            {
+                'field': 'Average',
+                'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1
+            },
+            {
+                'field': 'StdDev',
+                'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1
+            } 
+        ]
+    },
+]
 
-gridOptions =  {'defaultColDef': {'flex': 1, 'minWidth': 120, 'filterable': True,
-								  'groupable': False, 'editable': False, 
-                                  'wrapText': True, 'autoHeight': True, 
-                                  'suppressMovable': True,
-                                  'suppressMenu': False},
-				'columnDefs': columnDefs,
-                'initialState': {'rowSelection': [0,1]},
-				'tooltipShowDelay': 800, 
-                'tooltipMouseTrack': True,
-                'rowSelection': 'multiple', 
-                'rowMultiSelectWithClick': True, 
-                'suppressRowDeselection': False, 
-                'suppressRowClickSelection': False, 
-                'groupSelectsChildren': False, 
-                'groupSelectsFiltered': True}
+gridOptions =  {
+    'defaultColDef': {
+        'flex': 1,
+        'minWidth': 120,
+        'filterable': True,
+		'groupable': False,
+        'editable': False, 
+        'wrapText': True,
+        'autoHeight': True, 
+        'suppressMovable': True,
+        'suppressMenu': False
+    },
+    'columnDefs': columnDefs,
+    'initialState': {'rowSelection': [0,1]},
+    'tooltipShowDelay': 800, 
+    'tooltipMouseTrack': True,
+    'rowSelection': 'multiple', 
+    'rowMultiSelectWithClick': True, 
+    'suppressRowDeselection': False, 
+    'suppressRowClickSelection': False, 
+    'groupSelectsChildren': False, 
+    'groupSelectsFiltered': True
+}
 
-st.markdown('''#### WAR Leaderboard
-You can filter columns on mobile by holding down the column header, or on desktop by clicking the menu button when 
-you hover over it :blush: This lets you, for example, limit the table to only select pitchers.
+st.markdown('''
+#### WAR Leaderboard
+You can filter columns on mobile by holding down the column header, or on desktop by 
+clicking the menu button when you hover over it :blush: This lets you, for example,
+limit the table to only select pitchers.
 ''')
 
 left_col,right_col = st.columns(2)
 with left_col.expander('Included Years') :
-    years_select = st.multiselect("Included years", [2021,2022,2023,2024], [2024])
+    years_select = st.multiselect(
+        "Included years",
+        [2021,2022,2023,2024,2025],
+        [2025]
+    )
 with right_col.expander('Included Teams') :
-    teams_select = st.multiselect("Included Teams", disp_wars.Team.unique(), disp_wars.Team.unique(),
-                                    label_visibility='collapsed')
+    teams_select = st.multiselect(
+        "Included Teams", 
+        wars.select('team').unique()['team'].to_numpy().tolist(), 
+        wars.select('team').unique()['team'].to_numpy().tolist(), 
+        label_visibility='collapsed'
+    )
 
-year_filt = disp_wars.Year.isin(years_select)
-team_filt = disp_wars.Team.isin(teams_select)
+year_filt = wars.filter(cl('season').is_in(years_select))
+team_filt = wars.filter(cl('team').is_in(teams_select))
 
-return_value = AgGrid(disp_wars[year_filt & team_filt], 
-       gridOptions=gridOptions,
-       update_mode=GridUpdateMode.SELECTION_CHANGED | GridUpdateMode.VALUE_CHANGED,
-       allow_unsafe_jscode=True,
-       fit_columns_on_grid_load=True,
-       height=700,
-       theme="streamlit",
-       key=None,
-       custom_css=css)
+return_value = AgGrid(
+    wars.filter(
+        cl('season').is_in(years_select),
+        cl('team').is_in(teams_select)
+    ).to_pandas(),
+    gridOptions=gridOptions,
+    update_mode=GridUpdateMode.SELECTION_CHANGED | GridUpdateMode.VALUE_CHANGED,
+    allow_unsafe_jscode=True,
+    fit_columns_on_grid_load=True,
+    height=700,
+    theme="streamlit",
+    key=None,
+    custom_css=css
+)
 
 st.markdown('''#### Selected Players WAR''')
 if return_value.selected_rows is None:
@@ -177,7 +323,6 @@ else:
                     yaxis_range = [min(0,min_war),max_war+0.1],
                     title = title)
     st.plotly_chart(f,use_container_width=False,width=100)
-
 
 st.markdown('''#### Calculation Details''')
 raa_exp = st.expander('RAA Calculations for Each WAR')
@@ -486,21 +631,21 @@ $\small x$-axis demonstrate the method's predictive quality of future runs allow
 are highlighted, demonstrating that xBaseRuns is capable of better describing current-year production 
 than xERA while maintaining the same predictability of future RA9.
 ''')
-xera_comp_df = pd.read_pickle('xera_descriptiveness_df.pickle')
-name_dict = {'ra9': 'RA9', 'bsra9': 'BaseRuns9', 
-             'xbsra9': 'xBaseRuns9', 'K%':'K%', 'pibsra9': 'Pitching+ BsR9',
-             'xERA': 'xERA', 'stbsra9': 'Stuff+ BsR9'}
-xera_comp_df.rename(columns=name_dict,inplace=True)
-war_columns = xera_comp_df.columns.values[1:].tolist()
-xera_comp_df['Years into the Future'] = np.arange(4)
-f = go.Figure()
-alphas = [0.1, 0.1, 1.0, 1.0, 0.1, 0.1]
-for i,stat in enumerate(war_columns):
-    f.add_trace(go.Scatter(x=np.arange(4),y=xera_comp_df[stat],
-                           mode='lines',name=stat,opacity=alphas[i]))
-f.update_layout(xaxis ={'tick0': 0, 'dtick':    1, 'range': [0,3]},
-                yaxis ={'tick0': 0, 'dtick': 0.25, 'range': [0,1]},
-                title='Correlation to ERA or RA9')
+#xera_comp_df = pd.read_pickle('xera_descriptiveness_df.pickle')
+#name_dict = {'ra9': 'RA9', 'bsra9': 'BaseRuns9', 
+#             'xbsra9': 'xBaseRuns9', 'K%':'K%', 'pibsra9': 'Pitching+ BsR9',
+#             'xERA': 'xERA', 'stbsra9': 'Stuff+ BsR9'}
+#xera_comp_df.rename(columns=name_dict,inplace=True)
+#war_columns = xera_comp_df.columns.values[1:].tolist()
+#xera_comp_df['Years into the Future'] = np.arange(4)
+#f = go.Figure()
+#alphas = [0.1, 0.1, 1.0, 1.0, 0.1, 0.1]
+#for i,stat in enumerate(war_columns):
+#    f.add_trace(go.Scatter(x=np.arange(4),y=xera_comp_df[stat],
+#                           mode='lines',name=stat,opacity=alphas[i]))
+#f.update_layout(xaxis ={'tick0': 0, 'dtick':    1, 'range': [0,3]},
+#                yaxis ={'tick0': 0, 'dtick': 0.25, 'range': [0,1]},
+#                title='Correlation to ERA or RA9')
 
 baseruns_exp.plotly_chart(f,use_container_width=False,width=100)
 baseruns_exp.markdown(r'''
@@ -508,24 +653,24 @@ I observed similar behavior with the pitch modelling approaches, but with more o
 Using pi/stBaseRuns sacrifices some of the reliability and predictiveness of the pitch/stuff
 RV models for the sake of better descriptiveness. ''')
 
-pm_descr_df = pd.read_pickle('rv_vs_bsr_descr_df.pickle')
-name_dict = {'ra9': 'RA9', 'bsra9': 'BaseRuns9', 
-             'xbsra9': 'xBaseRuns9', 'K%':'K%', 'pibsra9': 'Pitching+ BsR9',
-             'xERA': 'xERA', 'stbsra9': 'Stuff+ BsR9', 'pirv9': 'Pitching+ RV9',
-             'strv9': 'Stuff+ RV9'}
-pm_descr_df.rename(columns=name_dict,inplace=True)
-war_columns = pm_descr_df.columns.values[1:].tolist()
-pm_descr_df['Years into the Future'] = np.arange(4)
-lss    = ['dotted','dotted','-','-','-.','dashed','dotted']
-alphas = [1.0, 1.0, 1.0, 1.0, 0.1, 0.1]
-f = go.Figure()
-for i,stat in enumerate(war_columns):
-    f.add_trace(go.Scatter(x=np.arange(4),y=pm_descr_df[stat],
-                           mode='lines',name=stat,opacity=alphas[i]))
-f.update_layout(xaxis ={'tick0': 0, 'dtick':    1, 'range': [0,3]},
-                yaxis ={'tick0': 0, 'dtick': 0.25, 'range': [0,1]},
-                title = 'Correlation to RA9')
-baseruns_exp.plotly_chart(f,use_container_width=False,width=100)
+#pm_descr_df = pd.read_pickle('rv_vs_bsr_descr_df.pickle')
+#name_dict = {'ra9': 'RA9', 'bsra9': 'BaseRuns9', 
+#             'xbsra9': 'xBaseRuns9', 'K%':'K%', 'pibsra9': 'Pitching+ BsR9',
+#             'xERA': 'xERA', 'stbsra9': 'Stuff+ BsR9', 'pirv9': 'Pitching+ RV9',
+#             'strv9': 'Stuff+ RV9'}
+#pm_descr_df.rename(columns=name_dict,inplace=True)
+#war_columns = pm_descr_df.columns.values[1:].tolist()
+#pm_descr_df['Years into the Future'] = np.arange(4)
+#lss    = ['dotted','dotted','-','-','-.','dashed','dotted']
+#alphas = [1.0, 1.0, 1.0, 1.0, 0.1, 0.1]
+#f = go.Figure()
+#for i,stat in enumerate(war_columns):
+#    f.add_trace(go.Scatter(x=np.arange(4),y=pm_descr_df[stat],
+#                           mode='lines',name=stat,opacity=alphas[i]))
+#f.update_layout(xaxis ={'tick0': 0, 'dtick':    1, 'range': [0,3]},
+#                yaxis ={'tick0': 0, 'dtick': 0.25, 'range': [0,1]},
+#                title = 'Correlation to RA9')
+#baseruns_exp.plotly_chart(f,use_container_width=False,width=100)
 
 war_exp = st.expander("Details of the WAR calculation &mdash; if you know how rWAR works you can skip this.")
 war_exp.markdown(r'''
@@ -621,19 +766,19 @@ is the best framer of the past few years. Sounds good.
 
 st.markdown('''#### Comparison of the WARs''')
 
-corr_matrix = st.expander("Correlation matrix between each of the WARs.")
-pitcher_years = pd.read_pickle('wars_for_correlation.pickle')
-war_columns = ['ra_war', 'r_war', 'oaa_war', 'bsr_war', 'xbsr_war', 'fip_war', 'pitch_war', 'stuff_war']
-name_fixer  = {v: war_names[i] for i,v in enumerate(war_columns)}
-pitcher_years.rename(columns=name_fixer,inplace=True)
-corr = pitcher_years[war_names].corr()
-mask = np.triu(np.ones_like(corr,dtype=bool),k=1)
-corr = corr.mask(mask)
-corr = np.round(corr,2)
-f = px.imshow(corr,text_auto=True)
-f.update_layout(title_text="Correlation Matrix",
-                title_x=0.5)
-corr_matrix.plotly_chart(f)
+#corr_matrix = st.expander("Correlation matrix between each of the WARs.")
+#pitcher_years = pd.read_pickle('wars_for_correlation.pickle')
+#war_columns = ['ra_war', 'r_war', 'oaa_war', 'bsr_war', 'xbsr_war', 'fip_war', 'pitch_war', 'stuff_war']
+#name_fixer  = {v: war_names[i] for i,v in enumerate(war_columns)}
+#pitcher_years.rename(columns=name_fixer,inplace=True)
+#corr = pitcher_years[war_names].corr()
+#mask = np.triu(np.ones_like(corr,dtype=bool),k=1)
+#corr = corr.mask(mask)
+#corr = np.round(corr,2)
+#f = px.imshow(corr,text_auto=True)
+#f.update_layout(title_text="Correlation Matrix",
+#                title_x=0.5)
+#corr_matrix.plotly_chart(f)
 
 
 resp_exp = st.expander("More details for what corrections are applied to each WAR.")

@@ -1,0 +1,20 @@
+[build-system]
+requires = ['setuptools>=69', 'wheel']
+build-backend = 'setuptools.build_meta'
+
+[project]
+name = 'mlb-war-spectrum'
+version = '0.1.0'
+description = 'Data scrapers, preprocessing tools, and models for WAR spectrum site'
+requires-python = '>=3.10'
+dependencies = [
+    'numpy',
+    'pandas',
+    'polars',
+    'pyarrow',
+    'scikit-learn',
+    'catboost',
+    'torch',
+]
+
+

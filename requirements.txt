@@ -1,6 +1,0 @@
-streamlit
-matplotlib
-pandas
-numpy
-streamlit-aggrid
-plotly
