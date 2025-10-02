@@ -1,6 +1,4 @@
 data/*.parquet
-data/*/*/*.parquet
-data/play_by_play/*/*/*.parquet
 .*
 !.gitignore
 !/.git/
