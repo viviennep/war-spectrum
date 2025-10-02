@@ -76,13 +76,6 @@ sc_df.write_parquet(
         'existing_data_behavior':'delete_matching'
     }
 )
-con = duckdb.connect(data_dir / 'leaderboard.duckdb')
-con.execute(f"""
-    create or replace view all_plays as
-    select *
-    from read_parquet('{data_dir}/play_by_play/*/*/*.parquet',
-                      hive_partitioning=True);
-""")
 
 # Aggregate
 stints = build_pitcher_stints(sc_df)
@@ -194,10 +187,4 @@ stints.write_parquet(
         'existing_data_behavior':'delete_matching'
     }
 )
-con.execute(f"""
-    create or replace table stints as
-    select *
-    from read_parquet('{data_dir}/stints/*/*.parquet',
-                      hive_partitioning=True);
-""")
 

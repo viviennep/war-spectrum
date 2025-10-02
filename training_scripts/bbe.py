@@ -6,5 +6,5 @@ cl = pl.col
 data_dir = pathlib.Path('../data').resolve()
 model_dir = pathlib.Path('../models').resolve()
 
-train_bbe(data_dir/'curated/events', model_dir/'bbe/bbe_classifier.joblib')
+train_bbe(data_dir/'play_by_play', model_dir/'bbe/bbe_classifier.joblib')
 
