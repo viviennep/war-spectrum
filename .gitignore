@@ -3,4 +3,5 @@ data/*.parquet
 !.gitignore
 !/.git/
 __*
+!__ini*
 *.swp
