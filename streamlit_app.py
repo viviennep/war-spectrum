@@ -29,6 +29,7 @@ wars = (
         *(cl(i).sum() for i in war_convert),
         IP      = cl('stint_out').sum()/3,
         RA      = cl('runs_allowed').sum(),
+        ER      = cl('ER_fg').sum(),
         BsR     = cl('baseruns').sum(),
         xBsR    = cl('xbaseruns').sum(),
         dipsBsR = cl('dips_baseruns').sum(),
@@ -36,6 +37,7 @@ wars = (
         stBsR   = cl('xbaseruns_stuff').sum(),
         K       = cl('stint_k').sum(),
         PA      = cl('stint_pa').sum(),
+        xERA    = (cl('stint_pa')*cl('xERA_fg')).sum()/cl('stint_pa').sum(),
         team=(
             pl.when(cl('team_abbr').len().eq(1))
             .then(cl('team_abbr').first())
@@ -49,14 +51,16 @@ wars = (
     )
     .filter(cl('PA')>0)
     .with_columns(
-        Average = pl.sum_horizontal(war_convert)/(len(war_convert)),
-        StdDev = pl.concat_list(war_convert).list.std(),
-        RA9    = 9*cl('RA')/cl('IP'),
-        BsR9   = 9*cl('BsR')/cl('IP'),
-        xBsR9  = 9*cl('xBsR')/cl('IP'),
-        piBsR9 = 9*cl('piBsR')/cl('IP'),
-        stBsR9 = 9*cl('stBsR')/cl('IP'),
-        Kpct   = cl('K')/cl('PA'),
+        Average  = pl.sum_horizontal(war_convert)/(len(war_convert)),
+        StdDev   = pl.concat_list(war_convert).list.std(),
+        ERA      = 9*cl('ER')/cl('IP'),
+        RA9      = 9*cl('RA')/cl('IP'),
+        BsR9     = 9*cl('BsR')/cl('IP'),
+        xBsR9    = 9*cl('xBsR')/cl('IP'),
+        dipsBsR9 = 9*cl('dipsBsR')/cl('IP'),
+        piBsR9   = 9*cl('piBsR')/cl('IP'),
+        stBsR9   = 9*cl('stBsR')/cl('IP'),
+        Kpct     = cl('K')/cl('PA'),
     )
     .sort('Average',descending=True)
 )
@@ -701,7 +705,7 @@ events in the following brackets.
 ##### xBaseRuns: The xERA-style Implementation
 This version uses the exact same form as the basic implementation but with real
 ball-in-play outcomes replaced by their expected number as determined using an
-EV,LA kNN classifier, just like xwOBA, but with no sprint speed correction.
+EV,LA,Sprint Speed based xgboost classifier.
 $$
 \mathrm{xBaseRuns} \gets  \begin{cases}
 \mathrm{Baserunners}   & \mathrm{xS+xD+xT+BB-xHR} \\
@@ -732,9 +736,8 @@ $$
 \end{cases}
 $$
 The expected number of walks and strikeouts are found from the pitcher's expected 
-strikes and balls, which are fed to a decision tree model to predict strikeouts and
-walks, along with the pitcher's innings pitched per game as I noticed that starters
-and relievers exhibited different behavior.
+strikes and balls, which are fed to an absorbing Markov chain model to predict 
+strikeouts and walks.
 
 ##### Why Am I Using This
 The purpose of these WARs is to best describe the pitcher's runs allowed while 
@@ -751,18 +754,39 @@ demonstrating that xBaseRuns is capable of better describing current-year produc
 than xERA while maintaining the same predictability of future RA9.
 ''')
 
-x_cols = ['RA9','BsR9','xBsR9','dipsBsR','piBsR','stBsR']
+x_cols = ['RA9','BsR9','xBsR9','dipsBsR9','piBsR9','stBsR9']
 name_dict = {
     'RA9': 'RA9',
     'BsR9': 'BaseRuns9',
     'xBsR9': 'xBaseRuns9',
     'dipsBsR9': 'DIPS BaseRuns9',
-    'piBsR': 'Pitch+ BaseRuns9',
-    'stBsR': 'Stuff+ BaseRuns9'
+    'piBsR9': 'Pitch+ BaseRuns9',
+    'stBsR9': 'Stuff+ BaseRuns9',
+    'xERA': 'xERA',
 }
-future_corr(wars, x_cols, 'RA9', 'IP', cutoff=16)
+corrs = future_corr(wars, x_cols, 'RA9', 'IP', cutoff=15)
+xera = future_corr(wars,['xERA'], 'ERA', 'IP', cutoff=15)
+corrs = np.c_[corrs,xera]
+
 f = go.Figure()
-alphas = [0.1, 0.1, 1.0, 1.0, 0.1, 0.1]
+alphas = [0.1, 0.1, 1.0, 0.1, 0.1, 0.1, 1.0]
+for i,stat in enumerate(x_cols+['xERA']):
+    f.add_trace(
+        go.Scatter(
+            x=np.arange(5),
+            y=corrs[:,i],
+            mode='lines',
+            name=name_dict[stat],
+            opacity=alphas[i]
+        )
+    )
+
+f.update_layout(
+    xaxis ={'tick0': 0, 'dtick':    1, 'range': [0,3]},
+    yaxis ={'tick0': 0, 'dtick': 0.25, 'range': [0,1]},
+    title='Correlation to RA9'
+)
+baseruns_exp.plotly_chart(f,use_container_width=False,width=100)
 
 #xera_comp_df = pd.read_pickle('xera_descriptiveness_df.pickle')
 #name_dict = {'ra9': 'RA9', 'bsra9': 'BaseRuns9', 
