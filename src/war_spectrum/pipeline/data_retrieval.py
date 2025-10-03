@@ -24,13 +24,16 @@ def load_raw_statcast(data_dir, start_year, end_year, daily=True, use_file=False
         path = data_dir / 'sc-2021-2024.parquet'
         sc_df = pl.read_parquet(path)
     else:
-        start_date = (
-            pl.scan_parquet(data_dir/'play_by_play')
-            .filter(cl('season').is_between(start_year, end_year))
-            .select(cl('game_date')-pl.duration(days=1))
-            .max()
-            .collect()
-        ).item().strftime('%Y-%m-%d')
+        try:
+            start_date = (
+                pl.scan_parquet(data_dir/'play_by_play')
+                .filter(cl('season').is_between(start_year, end_year))
+                .select(cl('game_date')-pl.duration(days=1))
+                .max()
+                .collect()
+            ).item().strftime('%Y-%m-%d')
+        except:
+            start_date = '2021-03-28'
         if daily:
             sc_df = get_statcast(data_dir,start_date,None)
         else:

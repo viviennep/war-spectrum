@@ -16,6 +16,7 @@ def build_pitcher_stints(sc_df):
             primary_position = cl('primary_position').first(),
             lg = cl('lg').first(),
             name = cl('full_name').first(),
+            birth_date = cl('birth_date').first(),
             stint_ci = cl('is_catcher_interf').sum(),
             stint_bb = cl('is_bb').sum(),
             stint_k = cl('is_k').sum(),
