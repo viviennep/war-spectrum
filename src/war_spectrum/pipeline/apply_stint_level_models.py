@@ -71,7 +71,7 @@ def attach_xbaseruns(stints, b_terms=b_terms):
         'cs'  : 'xcs',
         'ra'  : 'runs_allowed',
     }
-    return estimate_baseruns(stints, b_terms, name='xbaseruns')
+    return estimate_baseruns(stints, b_terms, name='xbaseruns', cutoff=1000)
 
 def attach_xbaseruns_stuff(stints, b_terms=b_terms):
     b_terms = {
