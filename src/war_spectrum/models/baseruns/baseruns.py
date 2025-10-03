@@ -16,7 +16,7 @@ b_terms = {
     'ra'  : 'runs_allowed',
 }
 
-def estimate_baseruns(stints, b_terms=b_terms, cutoff=3000, name='baseruns'):
+def estimate_baseruns(stints, b_terms=b_terms, cutoff=750, name='baseruns'):
     # RA = baserunners×% who score + homers
     # (RA-HR)/baserunners            = % who score
     # (b·<plays>)/(b·<plays> + outs) = % who score
