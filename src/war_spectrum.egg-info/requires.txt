@@ -1,0 +1,7 @@
+numpy
+pandas
+polars
+pyarrow
+scikit-learn
+catboost
+torch

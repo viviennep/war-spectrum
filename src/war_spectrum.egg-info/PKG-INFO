@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: war-spectrum
+Version: 0.1.0
+Summary: Data scrapers, preprocessing tools, and models for WAR spectrum site
+Requires-Python: >=3.10
+Requires-Dist: numpy
+Requires-Dist: pandas
+Requires-Dist: polars
+Requires-Dist: pyarrow
+Requires-Dist: scikit-learn
+Requires-Dist: catboost
+Requires-Dist: torch
