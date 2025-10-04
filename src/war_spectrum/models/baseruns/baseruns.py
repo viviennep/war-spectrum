@@ -16,7 +16,13 @@ b_terms = {
     'ra'  : 'runs_allowed',
 }
 
-def estimate_baseruns(stints, b_terms=b_terms, cutoff=1000, name='baseruns'):
+def estimate_baseruns(
+        stints,
+        b_terms=b_terms,
+        cutoff=10,
+        weighted=True,
+        name='baseruns'
+    ):
     # RA = baserunners×% who score + homers
     # (RA-HR)/baserunners            = % who score
     # (b·<plays>)/(b·<plays> + outs) = % who score
@@ -44,11 +50,12 @@ def estimate_baseruns(stints, b_terms=b_terms, cutoff=1000, name='baseruns'):
         )
     ).to_numpy()
     weights = stints.select('stint_pa').to_numpy().squeeze()
-    cutoff = 10; mask = y/weights<cutoff
-    X_mask = X[mask]; y_mask = y[mask]; weights_mask = weights[mask]
+    weights = weights if weighted else np.ones_like(weights)
+    mask = y/weights<cutoff
+    X_mask = X[mask]; y_mask = y[mask]; weights_mask = weights[mask].astype(np.float64)
     potentials = (
-        np.linalg.pinv(X_mask.T@np.diag(weights_mask)@X_mask)@
-        X_mask.T@(weights_mask*y_mask)
+        np.linalg.pinv(np.einsum('ij,i,ik->jk',X_mask,weights_mask,X_mask))@
+        np.einsum('ij,i,i->j',X_mask,weights_mask,y_mask)
     )
 
     stints = stints.with_columns(B = X@potentials)

@@ -54,7 +54,7 @@ def attach_baseruns(stints):
         'cs'  : 'n_cs',
         'ra'  : 'runs_allowed',
     }
-    return estimate_baseruns(stints, b_terms,name='baseruns')
+    return estimate_baseruns(stints, b_terms,name='baseruns',cutoff=1.)
 
 def attach_xbaseruns(stints, b_terms=b_terms):
     b_terms = {
@@ -71,7 +71,7 @@ def attach_xbaseruns(stints, b_terms=b_terms):
         'cs'  : 'xcs',
         'ra'  : 'runs_allowed',
     }
-    return estimate_baseruns(stints, b_terms, name='xbaseruns', cutoff=1000)
+    return estimate_baseruns(stints, b_terms, name='xbaseruns', cutoff=0.102)
 
 def attach_xbaseruns_stuff(stints, b_terms=b_terms):
     b_terms = {
@@ -88,7 +88,7 @@ def attach_xbaseruns_stuff(stints, b_terms=b_terms):
         'cs'  : 'xcs',
         'ra'  : 'runs_allowed',
     }
-    return estimate_baseruns(stints, b_terms, name='xbaseruns_stuff')
+    return estimate_baseruns(stints, b_terms, name='xbaseruns_stuff',cutoff=1.5)
 
 def attach_xbaseruns_pitch(stints, b_terms=b_terms):
     b_terms = {
@@ -105,5 +105,5 @@ def attach_xbaseruns_pitch(stints, b_terms=b_terms):
         'cs'  : 'xcs',
         'ra'  : 'runs_allowed',
     }
-    return estimate_baseruns(stints, b_terms, name='xbaseruns_pitch')
+    return estimate_baseruns(stints, b_terms, name='xbaseruns_pitch',cutoff=1.)
 

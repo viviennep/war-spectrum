@@ -787,48 +787,34 @@ f.update_layout(
     title='Correlation to RA9'
 )
 baseruns_exp.plotly_chart(f,use_container_width=False,width=100)
-
-#xera_comp_df = pd.read_pickle('xera_descriptiveness_df.pickle')
-#name_dict = {'ra9': 'RA9', 'bsra9': 'BaseRuns9', 
-#             'xbsra9': 'xBaseRuns9', 'K%':'K%', 'pibsra9': 'Pitching+ BsR9',
-#             'xERA': 'xERA', 'stbsra9': 'Stuff+ BsR9'}
-#xera_comp_df.rename(columns=name_dict,inplace=True)
-#war_columns = xera_comp_df.columns.values[1:].tolist()
-#xera_comp_df['Years into the Future'] = np.arange(4)
-#f = go.Figure()
-#alphas = [0.1, 0.1, 1.0, 1.0, 0.1, 0.1]
-#for i,stat in enumerate(war_columns):
-#    f.add_trace(go.Scatter(x=np.arange(4),y=xera_comp_df[stat],
-#                           mode='lines',name=stat,opacity=alphas[i]))
-#f.update_layout(xaxis ={'tick0': 0, 'dtick':    1, 'range': [0,3]},
-#                yaxis ={'tick0': 0, 'dtick': 0.25, 'range': [0,1]},
-#                title='Correlation to ERA or RA9')
-
-#baseruns_exp.plotly_chart(f,use_container_width=False,width=100)
 baseruns_exp.markdown(r'''
 I observed similar behavior with the pitch modelling approaches, but with more of a 
 trade-off. Using pi/stBaseRuns sacrifices some of the reliability and predictiveness 
 of the pitch/stuff RV models for the sake of better descriptiveness.
 ''')
 
-#pm_descr_df = pd.read_pickle('rv_vs_bsr_descr_df.pickle')
-#name_dict = {'ra9': 'RA9', 'bsra9': 'BaseRuns9', 
-#             'xbsra9': 'xBaseRuns9', 'K%':'K%', 'pibsra9': 'Pitching+ BsR9',
-#             'xERA': 'xERA', 'stbsra9': 'Stuff+ BsR9', 'pirv9': 'Pitching+ RV9',
-#             'strv9': 'Stuff+ RV9'}
-#pm_descr_df.rename(columns=name_dict,inplace=True)
-#war_columns = pm_descr_df.columns.values[1:].tolist()
-#pm_descr_df['Years into the Future'] = np.arange(4)
-#lss    = ['dotted','dotted','-','-','-.','dashed','dotted']
-#alphas = [1.0, 1.0, 1.0, 1.0, 0.1, 0.1]
-#f = go.Figure()
-#for i,stat in enumerate(war_columns):
-#    f.add_trace(go.Scatter(x=np.arange(4),y=pm_descr_df[stat],
-#                           mode='lines',name=stat,opacity=alphas[i]))
-#f.update_layout(xaxis ={'tick0': 0, 'dtick':    1, 'range': [0,3]},
-#                yaxis ={'tick0': 0, 'dtick': 0.25, 'range': [0,1]},
-#                title = 'Correlation to RA9')
-#baseruns_exp.plotly_chart(f,use_container_width=False,width=100)
+corrs = np.zeros((5,6))
+for i,x in enumerate(x_cols):
+    corrs[:,i] = future_corr(wars, [x], x, 'IP', cutoff=15).squeeze()
+
+lss    = ['dotted','dotted','-','-','-.','dashed','dotted']
+alphas = [1.0, 1.0, 1.0, 1.0, 0.1, 0.1]
+f = go.Figure()
+for i,stat in enumerate(x_cols):
+    f.add_trace(
+        go.Scatter(
+            x=np.arange(4),
+            y=corrs[:,i],
+            mode='lines',
+            name=name_dict[stat],
+            opacity=alphas[i]
+        )
+    )
+
+f.update_layout(xaxis ={'tick0': 0, 'dtick':    1, 'range': [0,3]},
+                yaxis ={'tick0': 0, 'dtick': 0.25, 'range': [0,1]},
+                title = 'Correlation to Self')
+baseruns_exp.plotly_chart(f,use_container_width=False,width=100)
 
 war_exp = st.expander(
     "Details of the WAR calculation &mdash; if you know how rWAR works you can skip this."
@@ -942,19 +928,15 @@ Sounds good.
 
 st.markdown('''#### Comparison of the WARs''')
 
-#corr_matrix = st.expander("Correlation matrix between each of the WARs.")
-#pitcher_years = pd.read_pickle('wars_for_correlation.pickle')
-#war_columns = ['ra_war', 'r_war', 'oaa_war', 'bsr_war', 'xbsr_war', 'fip_war', 'pitch_war', 'stuff_war']
-#name_fixer  = {v: war_names[i] for i,v in enumerate(war_columns)}
-#pitcher_years.rename(columns=name_fixer,inplace=True)
-#corr = pitcher_years[war_names].corr()
-#mask = np.triu(np.ones_like(corr,dtype=bool),k=1)
-#corr = corr.mask(mask)
-#corr = np.round(corr,2)
-#f = px.imshow(corr,text_auto=True)
-#f.update_layout(title_text="Correlation Matrix",
-#                title_x=0.5)
-#corr_matrix.plotly_chart(f)
+corr_matrix = st.expander("Correlation matrix between each of the WARs.")
+corr = wars.select(*[cl(k).alias(v) for k,v in war_convert.items()]).to_pandas().corr()
+mask = np.triu(np.ones_like(corr,dtype=bool),k=1)
+corr = corr.mask(mask)
+corr = np.round(corr,2)
+f = px.imshow(corr,text_auto=True)
+f.update_layout(title_text="Correlation Matrix",
+                title_x=0.5)
+corr_matrix.plotly_chart(f)
 
 
 resp_exp = st.expander("More details for what corrections are applied to each WAR.")
