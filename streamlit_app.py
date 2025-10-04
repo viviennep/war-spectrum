@@ -51,8 +51,8 @@ wars = (
     )
     .filter(cl('PA')>0)
     .with_columns(
-        Average  = pl.sum_horizontal(war_convert)/(len(war_convert)),
-        StdDev   = pl.concat_list(war_convert).list.std(),
+        Average  = pl.sum_horizontal(list(war_convert))/(len(war_convert)),
+        StdDev   = pl.concat_list(list(war_convert)).list.std(),
         ERA      = 9*cl('ER')/cl('IP'),
         RA9      = 9*cl('RA')/cl('IP'),
         BsR9     = 9*cl('BsR')/cl('IP'),
