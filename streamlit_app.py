@@ -380,7 +380,11 @@ else:
                              'ticktext': list(war_convert.values())},
                     yaxis_range = [min(0,min_war),max_war+0.1],
                     title = title)
-    st.plotly_chart(f,use_container_width=False,width=100)
+    config = {
+        'use_containter_width': False,
+        'width': 100,
+    }
+    st.plotly_chart(f,config=config)
 
 st.markdown('''#### Calculation Details''')
 raa_exp = st.expander('RAA Calculations for Each WAR')
@@ -786,7 +790,8 @@ f.update_layout(
     yaxis ={'tick0': 0, 'dtick': 0.25, 'range': [0,1]},
     title='Correlation to RA9'
 )
-baseruns_exp.plotly_chart(f,use_container_width=False,width=100)
+config = {'width': 100}
+baseruns_exp.plotly_chart(f,use_container_width=False,config=config)
 baseruns_exp.markdown(r'''
 I observed similar behavior with the pitch modelling approaches, but with more of a 
 trade-off. Using pi/stBaseRuns sacrifices some of the reliability and predictiveness 
@@ -814,7 +819,8 @@ for i,stat in enumerate(x_cols):
 f.update_layout(xaxis ={'tick0': 0, 'dtick':    1, 'range': [0,3]},
                 yaxis ={'tick0': 0, 'dtick': 0.25, 'range': [0,1]},
                 title = 'Correlation to Self')
-baseruns_exp.plotly_chart(f,use_container_width=False,width=100)
+config = {'width': 100}
+baseruns_exp.plotly_chart(f,use_container_width=False,config=config)
 
 war_exp = st.expander(
     "Details of the WAR calculation &mdash; if you know how rWAR works you can skip this."
