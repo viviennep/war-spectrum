@@ -12,9 +12,10 @@ dependencies = [
     'pandas',
     'polars',
     'pyarrow',
-    'scikit-learn',
-    'catboost',
-    'torch',
+    'streamlit-aggrid',
+    #'scikit-learn',     
+    #'catboost',        # comment these for the sake of streamlit boot speed
+    #'torch',
 ]
 
 [tool.setuptools]

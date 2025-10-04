@@ -5,3 +5,4 @@ data/*.parquet
 __*
 !__ini*
 *.swp
+build
