@@ -8,8 +8,9 @@ targets = ['is_1b','is_2b','is_3b','is_hr','is_sf','is_gidp','is_out']
 
 def load_Xy(data_path):
     df = pl.read_parquet(data_path)
-    X = df.filter('is_tracked').select(features).to_numpy()
-    y = df.filter('is_tracked').select(targets).fill_null(False).to_numpy()
+    mask = cl('is_tracked') & pl.any_horizontal(targets)
+    X = df.filter(mask).select(features).to_numpy()
+    y = df.filter(mask).select(targets).to_numpy()
     y = y.argmax(1)
     return X,y
 
