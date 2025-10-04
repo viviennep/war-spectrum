@@ -3,7 +3,7 @@ from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
 cl = pl.col
 
-features = ['launch_speed','launch_angle','sprint_speed']
+features = ['launch_speed','launch_angle','sprint_speed','season']
 targets = ['is_1b','is_2b','is_3b','is_hr','is_sf','is_gidp','is_out']
 
 def load_Xy(data_path):
@@ -17,7 +17,7 @@ def train_bbe(data_path, model_save_path):
     X,y = load_Xy(pathlib.Path(data_path).resolve())
     X_tr, X_va, y_tr, y_va = train_test_split(
         X, y,
-        test_size=0.10,
+        test_size=0.05,
         stratify=y
     )
 
