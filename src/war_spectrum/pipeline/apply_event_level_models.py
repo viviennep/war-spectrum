@@ -1,20 +1,8 @@
 import numpy as np, polars as pl, pathlib
 cl = pl.col
 
-#def apply_bbe_classifier(df, model_path):
-#    from war_spectrum.models.bbe import load_model, features, targets
-#    bbe_classifier = load_model(model_path)
-#    X = df.filter('is_tracked').select(features).to_numpy()
-#    pred_y = bbe_classifier.predict_proba(X)
-#    track_mask = df.select('is_tracked').to_numpy().squeeze()
-#    y = np.zeros((len(df),pred_y.shape[1]))
-#    y[track_mask] = pred_y
-#    new_labels = [f"pred_{i.split('_')[1]}" for i in targets]
-#    bbe_df = pl.DataFrame(dict(zip(new_labels,y.T)))
-#    return df.hstack(bbe_df)
-
 def apply_bbe_classifier(df, model_path):
-    from war_spectrum.models.bbe.xg_bbe import load_model, features, targets
+    from war_spectrum.models.bbe import load_model, features, targets
     bbe_classifier = load_model(model_path)
     X = df.filter('is_tracked').select(features).to_numpy()
     pred_y = bbe_classifier.predict_proba(X)
@@ -24,6 +12,18 @@ def apply_bbe_classifier(df, model_path):
     new_labels = [f"pred_{i.split('_')[1]}" for i in targets]
     bbe_df = pl.DataFrame(dict(zip(new_labels,y.T)))
     return df.hstack(bbe_df)
+
+#def apply_bbe_classifier(df, model_path):
+#    from war_spectrum.models.bbe.cb_bbe import load_model, features, targets
+#    bbe_classifier = load_model(model_path)
+#    X = df.filter('is_tracked').select(features).to_numpy()
+#    pred_y = bbe_classifier.predict_proba(X)
+#    track_mask = df.select('is_tracked').to_numpy().squeeze()
+#    y = np.zeros((len(df),pred_y.shape[1]))
+#    y[track_mask] = pred_y
+#    new_labels = [f"pred_{i.split('_')[1]}" for i in targets]
+#    bbe_df = pl.DataFrame(dict(zip(new_labels,y.T)))
+#    return df.hstack(bbe_df)
 
 def apply_stuff(df, model_path):
     from war_spectrum.models.pitch_quality import PitchQualityModel
