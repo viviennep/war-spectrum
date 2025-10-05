@@ -1,6 +1,7 @@
 import numpy as np, polars as pl, joblib
 from sklearn.neighbors import KNeighborsClassifier
 from catboost import CatBoostClassifier
+from war_spectrum.models.utils import split_file,assemble_to_tempfile
 cl = pl.col
 
 class PitchQualityModel():
@@ -254,7 +255,7 @@ class PitchQualityModel():
 
         return out
 
-    def save(self, path):
+    def save(self, path, split):
         out = {
             'init_params': {
                 'pitch_types': self.pitch_types,
@@ -274,10 +275,16 @@ class PitchQualityModel():
             'out_order': self.out_order,
         }
         joblib.dump(out, path)
+        if split:
+            split_file(path)
 
     @classmethod
-    def load(cls, path):
-        info = joblib.load(path)
+    def load(cls, path, split=True):
+        if split:
+            tmp = assemble_to_tempfile(path)
+            info = joblib.load(tmp)
+        else:
+            info = joblib.load(path)
         model = cls(submodel_masks={}, **info['init_params'])
         model.class_order = info['class_order']
         model.swing_models = info['submodels']['swing_models']

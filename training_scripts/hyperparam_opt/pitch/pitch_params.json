@@ -1,3 +1,1 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:a5fd417d974ce00c892637a20d9dcb0bfe583c9191ffae5a8952811e3c16d723
-size 717
+{"is_swing": {"lr": 0.05973930045842604, "depth": 9, "l2": 3.582399273932506, "rand": 0.0020255948093139266, "bagtemp": 0.132904744002824, "iters": 954, "od_wait": 125}, "outcome_given_take": {"lr": 0.044854033174543353, "depth": 7, "l2": 0.07423312643539867, "rand": 0.004231037181922984, "bagtemp": 0.11871454031074963, "iters": 1063, "od_wait": 148}, "outcome_given_swing": {"lr": 0.029742158972208745, "depth": 9, "l2": 11.719851849575024, "rand": 0.03822961821695056, "bagtemp": 0.3248060326031952, "iters": 1498, "od_wait": 100}, "outcome_given_bbe": {"lr": 0.014684567446659509, "depth": 5, "l2": 0.0015842077017061097, "rand": 0.0059947336702514, "bagtemp": 0.2970805000028542, "iters": 1273, "od_wait": 161}}

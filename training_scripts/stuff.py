@@ -7,7 +7,7 @@ cl = pl.col
 data_dir = pathlib.Path('../data').resolve()
 model_dir = pathlib.Path('../models').resolve()
 
-df = pl.read_parquet(data_dir / 'curated/events',hive_partitioning=True)
+df = pl.read_parquet(data_dir / 'play_by_play',hive_partitioning=True)
 
 # Add in arm angle for pitches that don't have em
 df = impute_arm_angle(df, model_dir / 'pitch_quality/arm_angle_imputer.cbm')

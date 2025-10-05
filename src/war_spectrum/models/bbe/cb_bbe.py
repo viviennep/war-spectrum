@@ -1,6 +1,7 @@
 import numpy as np, polars as pl, pathlib, joblib
 from sklearn.model_selection import train_test_split
 from catboost import CatBoostClassifier
+from war_spectrum.models.utils import split_file,assemble_to_tempfile
 cl = pl.col
 
 features = ['launch_speed','launch_angle','sprint_speed','season']
@@ -14,7 +15,7 @@ def load_Xy(data_path):
     y = y.argmax(1)
     return X,y
 
-def train_bbe(data_path, model_save_path):
+def train_bbe(data_path, model_save_path, split=True):
     X,y = load_Xy(pathlib.Path(data_path).resolve())
     X_tr, y_tr = X,y
 
@@ -37,9 +38,16 @@ def train_bbe(data_path, model_save_path):
         verbose=True,
     )
 
-    joblib.dump(model, pathlib.Path(model_save_path).resolve())
+    save_path = pathlib.Path(model_save_path).resolve()
+    joblib.dump(model, save_path)
+    if split:
+        split_file(save_path)
 
-def load_model(model_path):
-    return joblib.load(pathlib.Path(model_path).resolve())
+def load_model(model_path, split=True):
+    if split:
+        tmp = assemble_to_tempfile(model_path)
+        return joblib.load(tmp)
+    else:
+        return joblib.load(pathlib.Path(model_path).resolve())
 
 
