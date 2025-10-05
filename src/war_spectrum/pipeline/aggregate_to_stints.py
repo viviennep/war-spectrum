@@ -32,7 +32,10 @@ def build_pitcher_stints(sc_df):
             stint_balls = cl('is_ball').sum(),
             stint_strikes = cl('is_strike').sum(),
             stint_called_strikes = cl('is_called_strike').sum(),
-            stint_out = cl('is_out').sum(),
+            stint_out = (
+                cl('is_out').sum()-cl('is_k').sum().cast(int)
+                - cl('is_sf').sum().cast(int) - cl('is_gidp').sum().cast(int)
+            ),
             stint_roe = cl('is_reached_on_error').sum(),
             stint_cs = cl('is_caught_steal').sum(),
             stint_hbp = cl('is_hbp').sum(),
