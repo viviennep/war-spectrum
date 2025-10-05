@@ -322,8 +322,9 @@ gridOptions =  {
 st.markdown('''
 #### WAR Leaderboard
 You can filter columns on mobile by holding down the column header, or on desktop by 
-clicking the menu button when you hover over it :blush: This lets you, for example,
-limit the table to only select pitchers.
+clicking the menu button when you hover over it :blush:  
+This lets you, for example, search for specific pitchers, or seasons within a specific 
+WAR range.
 ''')
 
 team_list = wars.select('team').unique().sort('team')['team'].to_numpy().tolist()
