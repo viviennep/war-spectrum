@@ -16,8 +16,8 @@ war_convert = {
     'Rally_WAR': 'Rally WAR',
     'OAA_WAR'  : 'OAA WAR',
     'BsR_WAR'  : 'BaseRuns WAR',
-    'DIPS_WAR' : 'FIP WAR',
     'xBsR_WAR' : 'xBaseRuns WAR',
+    'DIPS_WAR' : 'FIP WAR',
     'Stuff_WAR': 'Stuff+ WAR',
     'Pitch_WAR': 'Pitch+ WAR',
 }
@@ -760,8 +760,9 @@ The $\small x$-axis represents years into the future, so $\small x=0$ represents
 correlation between the estimate and the RA9 it is trying to estimate, aka its 
 descriptiveness.  Greater values on the $\small x$-axis demonstrate the method's
 predictive quality of future runs allowed. xERA and xBaseRuns are highlighted, 
-demonstrating that xBaseRuns is capable of better describing current-year production 
-than xERA while maintaining the same predictability of future RA9.
+demonstrating that xBaseRuns is similar to xERA in terms of both descriptiveness
+and predictiveness (of RA9/ERA respectively), with a slight advantage to xBaseRuns.
+
 ''')
 
 x_cols = ['RA9','BsR9','xBsR9','dipsBsR9','piBsR9','stBsR9']
@@ -774,8 +775,8 @@ name_dict = {
     'stBsR9': 'Stuff+ BaseRuns9',
     'xERA': 'xERA',
 }
-corrs = future_corr(wars, x_cols, 'RA9', 'PA', cutoff=20)
-xera = future_corr(wars, ['xERA'], 'ERA', 'PA', cutoff=20)
+corrs = future_corr(wars, x_cols, 'RA9', 'PA', cutoff=12)
+xera = future_corr(wars, ['xERA'], 'ERA', 'PA', cutoff=12)
 corrs = np.c_[corrs,xera]
 
 f = go.Figure()
@@ -799,19 +800,18 @@ f.update_layout(
 config = {'width': 100}
 baseruns_exp.plotly_chart(f,use_container_width=False,config=config)
 baseruns_exp.markdown(r'''
-I observed similar behavior with the pitch modelling approaches, but with more of a 
-trade-off. Using pi/stBaseRuns sacrifices some of the reliability and predictiveness 
-of the pitch/stuff RV models for the sake of better descriptiveness.
+When looking at reliability (self-correlation into the future) xBaseRuns comes out 
+slightly above xERA as well.  
 ''')
 
-corrs = np.zeros((5,6))
-for i,x in enumerate(x_cols):
+corrs = np.zeros((5,7))
+for i,x in enumerate(x_cols+['xERA']):
     corrs[:,i] = future_corr(wars, [x], x, 'IP', cutoff=15).squeeze()
 
-lss    = ['dotted','dotted','-','-','-.','dashed','dotted']
-alphas = [1.0, 1.0, 1.0, 1.0, 0.1, 0.1]
+lss    = ['dotted','dotted','-','-','-.','dashed','dotted','-']
+alphas = [0.1, 0.1, 1.0, 0.1, 0.1, 0.1, 1.]
 f = go.Figure()
-for i,stat in enumerate(x_cols):
+for i,stat in enumerate(x_cols+['xERA']):
     f.add_trace(
         go.Scatter(
             x=np.arange(4),
