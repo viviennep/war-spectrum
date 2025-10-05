@@ -23,9 +23,19 @@ war_convert = {
 }
 
 wars = (
-    stints.group_by('pitcher','season')
+    stints
+    .with_columns(
+        age = (
+            cl('season') - cl('birth_date').dt.year() -
+            pl.when(cl('birth_date').dt.month() >= 7)
+              .then(1)
+              .otherwise(0)
+        )
+    )
+    .group_by('pitcher','season')
     .agg(
         cl('name').first(),
+        cl('age').first(),
         *(cl(i).sum() for i in war_convert),
         IP      = cl('stint_out').sum()/3,
         RA      = cl('runs_allowed').sum(),
@@ -173,7 +183,8 @@ columnDefs = [
         'sortable': True,
     },
     {
-        'field': "Age",
+        'field': "age",
+        'headerName': 'Age',
         'minWidth':  70,
         'filter': True,
         'sortable': True, 
