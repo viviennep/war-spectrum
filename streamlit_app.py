@@ -9,8 +9,6 @@ cl = pl.col
 
 data_dir  = pathlib.Path(__file__).resolve().parent / 'data'
 
-stints = pl.read_parquet(data_dir / 'stints')
-
 war_convert = {
     'RA_WAR'   : 'Runs Allowed WAR',
     'Rally_WAR': 'Rally WAR',
@@ -22,63 +20,68 @@ war_convert = {
     'Stuff_WAR': 'Stuff+ WAR',
 }
 
-wars = (
-    stints
-    .with_columns(
-        age = (
-            cl('season') - cl('birth_date').dt.year() -
-            pl.when(cl('birth_date').dt.month() >= 7)
-              .then(1)
-              .otherwise(0)
+@st.cache_data(show_spinner=False)
+def load_wars(data_dir):
+    stints = pl.read_parquet(data_dir / 'stints')
+    return (
+        stints
+        .with_columns(
+            age = (
+                cl('season') - cl('birth_date').dt.year() -
+                pl.when(cl('birth_date').dt.month() >= 7)
+                  .then(1)
+                  .otherwise(0)
+            )
         )
-    )
-    .group_by('pitcher','season')
-    .agg(
-        cl('name').first(),
-        cl('age').first(),
-        *(cl(i).sum() for i in war_convert),
-        IP      = cl('stint_out').sum()/3,
-        RA      = cl('runs_allowed').sum(),
-        ER      = (
-            pl.when(cl('R_fg')>0)
-            .then(cl('runs_allowed')*cl('ER_fg')/cl('R_fg'))
-            .otherwise(0.)
-            .sum()
-        ),
-        BsR     = cl('baseruns').sum(),
-        xBsR    = cl('xbaseruns').sum(),
-        dipsBsR = cl('dips_baseruns').sum(),
-        piBsR   = cl('xbaseruns_pitch').sum(),
-        stBsR   = cl('xbaseruns_stuff').sum(),
-        K       = cl('stint_k').sum(),
-        PA      = cl('stint_pa').sum(),
-        xERA    = (cl('stint_pa')*cl('xERA_fg')).sum()/cl('stint_pa').sum(),
-        team=(
-            pl.when(cl('team_abbr').len().eq(1))
-            .then(cl('team_abbr').first())
-            .when(cl('team_abbr').len().eq(2)).then(pl.lit('2TM'))
-            .when(cl('team_abbr').len().eq(3)).then(pl.lit('3TM'))
-            .when(cl('team_abbr').len().eq(4)).then(pl.lit('4TM'))
-            .when(cl('team_abbr').len().eq(5)).then(pl.lit('5TM'))
-            .when(cl('team_abbr').len().eq(6)).then(pl.lit('6TM'))
-            .otherwise(pl.lit('7+TM'))
+        .group_by('pitcher','season')
+        .agg(
+            cl('name').first(),
+            cl('age').first(),
+            *(cl(i).sum() for i in war_convert),
+            IP      = cl('stint_out').sum()/3,
+            RA      = cl('runs_allowed').sum(),
+            ER      = (
+                pl.when(cl('R_fg')>0)
+                .then(cl('runs_allowed')*cl('ER_fg')/cl('R_fg'))
+                .otherwise(0.)
+                .sum()
+            ),
+            BsR     = cl('baseruns').sum(),
+            xBsR    = cl('xbaseruns').sum(),
+            dipsBsR = cl('dips_baseruns').sum(),
+            piBsR   = cl('xbaseruns_pitch').sum(),
+            stBsR   = cl('xbaseruns_stuff').sum(),
+            K       = cl('stint_k').sum(),
+            PA      = cl('stint_pa').sum(),
+            xERA    = (cl('stint_pa')*cl('xERA_fg')).sum()/cl('stint_pa').sum(),
+            team=(
+                pl.when(cl('team_abbr').len().eq(1))
+                .then(cl('team_abbr').first())
+                .when(cl('team_abbr').len().eq(2)).then(pl.lit('2TM'))
+                .when(cl('team_abbr').len().eq(3)).then(pl.lit('3TM'))
+                .when(cl('team_abbr').len().eq(4)).then(pl.lit('4TM'))
+                .when(cl('team_abbr').len().eq(5)).then(pl.lit('5TM'))
+                .when(cl('team_abbr').len().eq(6)).then(pl.lit('6TM'))
+                .otherwise(pl.lit('7+TM'))
+            )
         )
+        .filter(cl('IP')>0)
+        .with_columns(
+            Average  = pl.sum_horizontal(list(war_convert))/(len(war_convert)),
+            StdDev   = pl.concat_list(list(war_convert)).list.std(),
+            ERA      = 9*cl('ER')/cl('IP'),
+            RA9      = 9*cl('RA')/cl('IP'),
+            BsR9     = 9*cl('BsR')/cl('IP'),
+            xBsR9    = 9*cl('xBsR')/cl('IP'),
+            dipsBsR9 = 9*cl('dipsBsR')/cl('IP'),
+            piBsR9   = 9*cl('piBsR')/cl('IP'),
+            stBsR9   = 9*cl('stBsR')/cl('IP'),
+            Kpct     = cl('K')/cl('PA'),
+        )
+        .sort('Average',descending=True)
     )
-    .filter(cl('IP')>0)
-    .with_columns(
-        Average  = pl.sum_horizontal(list(war_convert))/(len(war_convert)),
-        StdDev   = pl.concat_list(list(war_convert)).list.std(),
-        ERA      = 9*cl('ER')/cl('IP'),
-        RA9      = 9*cl('RA')/cl('IP'),
-        BsR9     = 9*cl('BsR')/cl('IP'),
-        xBsR9    = 9*cl('xBsR')/cl('IP'),
-        dipsBsR9 = 9*cl('dipsBsR')/cl('IP'),
-        piBsR9   = 9*cl('piBsR')/cl('IP'),
-        stBsR9   = 9*cl('stBsR')/cl('IP'),
-        Kpct     = cl('K')/cl('PA'),
-    )
-    .sort('Average',descending=True)
-)
+
+wars = load_wars(data_dir)
 
 def wcorr(x,y,w):
     μx = (w*x).sum()/w.sum()
@@ -88,6 +91,7 @@ def wcorr(x,y,w):
     cov = (w*(x-μx)*(y-μy)).sum()/w.sum()
     return cov/np.sqrt(vx*vy)
 
+@st.cache_data(show_spinner=False)
 def future_corr(df, x_cols, target, w_col, n_years = 5, cutoff = 15):
     res = np.zeros((n_years,len(x_cols)))
     for year in range(n_years):
@@ -145,7 +149,7 @@ with each and every run he allowed in their entirety, and then proceeding to str
 responsibility step by step to the point that the model doesn't even know about what 
 happened on any of the pitches he threw, or where they were located for that matter. 
 
-There's a sortable & filterable leaderboard that has all pitcher seasons from 2021-2024,
+There's a sortable & filterable leaderboard that has all pitcher seasons from 2021-2025,
 if you select the rows then a line plot of their WARs will appear below the table :smile:
 There are also a few dropdowns where I explain each of the WAR calculations and justify 
 my decisions for them all, including an explanation for why I'm using BaseRuns rather 
@@ -264,9 +268,9 @@ columnDefs = [
                 'headerName': 'FIP',
                 'minWidth': 80,
                 'type' : ['numericColumn', 'customNumericFormat'], 'precision': 1,
-                'headerTooltip': "rWAR-style but with FIP",
+                'headerTooltip': "rWAR-style but with DIPS BaseRuns",
                 'tooltipValueGetter': JsCode(
-                    """function(){return "rWAR-style but with FIP"}"""
+                    """function(){return "rWAR-style but with DIPS BaseRuns"}"""
                 )
             },
         ]
