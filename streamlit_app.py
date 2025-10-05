@@ -18,8 +18,8 @@ war_convert = {
     'BsR_WAR'  : 'BaseRuns WAR',
     'xBsR_WAR' : 'xBaseRuns WAR',
     'DIPS_WAR' : 'FIP WAR',
-    'Stuff_WAR': 'Stuff+ WAR',
     'Pitch_WAR': 'Pitch+ WAR',
+    'Stuff_WAR': 'Stuff+ WAR',
 }
 
 wars = (
@@ -775,8 +775,8 @@ name_dict = {
     'stBsR9': 'Stuff+ BaseRuns9',
     'xERA': 'xERA',
 }
-corrs = future_corr(wars, x_cols, 'RA9', 'PA', cutoff=12)
-xera = future_corr(wars, ['xERA'], 'ERA', 'PA', cutoff=12)
+corrs = future_corr(wars, x_cols, 'RA9', 'PA', cutoff=15)
+xera = future_corr(wars, ['xERA'], 'ERA', 'PA', cutoff=15)
 corrs = np.c_[corrs,xera]
 
 f = go.Figure()
