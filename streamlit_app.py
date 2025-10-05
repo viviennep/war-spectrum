@@ -29,7 +29,12 @@ wars = (
         *(cl(i).sum() for i in war_convert),
         IP      = cl('stint_out').sum()/3,
         RA      = cl('runs_allowed').sum(),
-        ER      = cl('ER_fg').sum(),
+        ER      = (
+            pl.when(cl('R_fg')>0)
+            .then(cl('runs_allowed')*cl('ER_fg')/cl('R_fg'))
+            .otherwise(0.)
+            .sum()
+        ),
         BsR     = cl('baseruns').sum(),
         xBsR    = cl('xbaseruns').sum(),
         dipsBsR = cl('dips_baseruns').sum(),
@@ -49,7 +54,7 @@ wars = (
             .otherwise(pl.lit('7+TM'))
         )
     )
-    .filter(cl('PA')>0)
+    .filter(cl('IP')>0)
     .with_columns(
         Average  = pl.sum_horizontal(list(war_convert))/(len(war_convert)),
         StdDev   = pl.concat_list(list(war_convert)).list.std(),
@@ -96,7 +101,7 @@ def future_corr(df, x_cols, target, w_col, n_years = 5, cutoff = 15):
                 future_df,
                 on=['pitcher','year'],
             ).with_columns(
-                w = 2*(1/cl('w') + 1/cl('w_future'))
+                w = 2/(1/cl('w') + 1/cl('w_future'))
             ).filter(cl('w')>0)
         )
         w = joined['w'].to_numpy()
@@ -769,8 +774,8 @@ name_dict = {
     'stBsR9': 'Stuff+ BaseRuns9',
     'xERA': 'xERA',
 }
-corrs = future_corr(wars, x_cols, 'RA9', 'IP', cutoff=15)
-xera = future_corr(wars,['xERA'], 'ERA', 'IP', cutoff=15)
+corrs = future_corr(wars, x_cols, 'RA9', 'PA', cutoff=20)
+xera = future_corr(wars, ['xERA'], 'ERA', 'PA', cutoff=20)
 corrs = np.c_[corrs,xera]
 
 f = go.Figure()
